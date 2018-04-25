@@ -10,7 +10,17 @@ import Text.LaTeX.Base.Parser
 import Text.LaTeX.Base.Syntax
 import Text.LaTeX.Base.Render
 import System.Directory
+import Control.Monad
+import Control.Monad.State
 import qualified Data.Text as T
+
+type MyState a = StateT Int IO a
+
+pACKAGENAME :: String
+pACKAGENAME = "plotex"
+
+letters :: [String]
+letters = [1..] >>= flip replicateM ['a'..'z']
 
 printLatex :: Either ParseError LaTeX -> IO ()
 printLatex (Left _error) = return ()
@@ -22,11 +32,34 @@ renderLatex = do
     let filePath = path ++ "/resources/test.tex"
     latex <- parseLaTeXFile filePath
     printLatex latex
-    let latex' = fmap processLatex latex
+    let latex' = fmap evalLatex latex
     iolatex <- case latex' of
         Left err -> (return . TeXRaw . fromString . show) err
         Right iolatex -> iolatex 
     renderFile filePath iolatex
+
+evalLatex :: LaTeX -> IO LaTeX
+evalLatex latex = evalStateT (processLatex' latex) 0
+
+processLatex' :: LaTeX -> MyState LaTeX
+processLatex' (TeXComm "plot" [FixArg (TeXRaw dsl)]) = do
+    s <- get
+    modify (+ 1)
+    fileName <- liftIO $ processDSL' (letters !! s) dsl
+    return (TeXComm "plot" [FixArg (TeXRaw fileName)])
+processLatex' (TeXSeq first second) = do
+    first' <- processLatex' first
+    second' <- processLatex' second
+    return (TeXSeq first' second')
+processLatex' (TeXEnv str args latex) = do
+    latex' <- processLatex' latex
+    return (TeXEnv str args latex')
+processLatex' x = return x
+
+processDSL' :: String -> T.Text -> IO T.Text
+processDSL' myid text = do
+    print text
+    return $ fromString $ pACKAGENAME ++ "_" ++ myid ++ ".png"
 
 processLatex :: LaTeX -> IO LaTeX
 processLatex (TeXSeq first second) = do
