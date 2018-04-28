@@ -1,61 +1,59 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Lib
-    ( someFunc
+    ( renderLatex
     ) where
 
 import Interp
 import Uid
+import Config
 
-import Graphics.Rendering.Chart.Easy
-import Graphics.Rendering.Chart.Backend.Cairo
 import Text.LaTeX.Base.Parser
 import Text.LaTeX.Base.Syntax
 import Text.LaTeX.Base.Render
-import System.Directory
 import Control.Monad.State
+import Control.Monad.Reader
+
 
 printLatex :: Either ParseError LaTeX -> IO ()
 printLatex (Left _error) = return ()
 printLatex (Right ast)   = print ast
 
-renderLatex :: IO ()
+renderLatex :: Program ()
 renderLatex = do
-    path <- getCurrentDirectory
-    let filePath = path ++ "/resources/test.tex"
-    latex <- parseLaTeXFile filePath
-    printLatex latex
+    filePath <- getPath <$> ask
+    latex <- liftIO $ parseLaTeXFile filePath
+    liftIO $ printLatex latex
     let latex' = fmap evalLatex latex
     iolatex <- case latex' of
         Left err -> (return . TeXRaw . fromString . show) err
         Right iolatex -> iolatex 
-    renderFile filePath iolatex
+    liftIO $ renderFile filePath iolatex
 
-evalLatex :: LaTeX -> IO LaTeX
+evalLatex :: LaTeX -> Program LaTeX
 evalLatex latex = evalStateT (processLatex latex) 0
 
-processLatex :: LaTeX -> StateT Int IO LaTeX
-processLatex = traverseLatex (+1) helper 
-    where
-        helper sta (TeXComm "plot" [FixArg (TeXRaw dsl)]) =
-            processDSL (generateUID sta) dsl
+processLatex :: LaTeX -> StateT Int Program LaTeX
+processLatex = traverseLatex (+1) processLatexHelper 
 
-traverseLatex :: (s -> s) -> (s -> LaTeX -> IO LaTeX) -> LaTeX -> StateT s IO LaTeX
+processLatexHelper :: Int -> LaTeX -> Program LaTeX
+processLatexHelper sta (TeXComm "plot" [FixArg (TeXRaw dsl)]) =
+    processDSL (generateUID sta) dsl
+
+traverseLatex :: Monad m => (s -> s) -> (s -> LaTeX -> m LaTeX) -> LaTeX -> StateT s m LaTeX
 traverseLatex update f tex@(TeXComm "plot" _args) = do
     sta <- get
     modify update
-    liftIO $ f sta tex
+    lift $ f sta tex
 traverseLatex update f (TeXSeq first second) = do
     first' <- traverseLatex update f first
     second' <- traverseLatex update f second
     return (TeXSeq first' second')
 traverseLatex update f (TeXEnv str args latex) = do
     latex' <- traverseLatex update f latex
-    return (TeXEnv str args latex')
+    return $ TeXEnv str args latex'
 traverseLatex _ _ x = return x
 
-someFunc :: IO ()
-someFunc = renderLatex
 -- processLatex :: LaTeX -> IO LaTeX
 -- processLatex (TeXSeq first second) = do
 --     first' <- processLatex first
