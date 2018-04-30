@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Lib
-    ( renderLatex
+    ( evalLatex
     ) where
 
 import Interp
@@ -14,37 +14,32 @@ import Text.LaTeX.Base.Render
 import Control.Monad.State
 import Control.Monad.Reader
 
-
-printLatex :: Either ParseError LaTeX -> IO ()
-printLatex (Left _error) = return ()
-printLatex (Right ast)   = print ast
+evalLatex :: Config -> IO ()
+evalLatex = flip evalStateT 0 . runReaderT renderLatex 
 
 renderLatex :: Program ()
 renderLatex = do
-    filePath <- getPath <$> ask
+    filePath <- asks getPath
     latex <- liftIO $ parseLaTeXFile filePath
     liftIO $ printLatex latex
-    let latex' = fmap evalLatex latex
+    let latex' = fmap processLatex latex
     iolatex <- case latex' of
         Left err -> (return . TeXRaw . fromString . show) err
         Right iolatex -> iolatex 
     liftIO $ renderFile filePath iolatex
 
-evalLatex :: LaTeX -> Program LaTeX
-evalLatex latex = evalStateT (processLatex latex) 0
-
-processLatex :: LaTeX -> StateT Int Program LaTeX
+processLatex :: LaTeX -> Program LaTeX
 processLatex = traverseLatex (+1) processLatexHelper 
 
 processLatexHelper :: Int -> LaTeX -> Program LaTeX
 processLatexHelper sta (TeXComm "plot" [FixArg (TeXRaw dsl)]) =
     processDSL (generateUID sta) dsl
 
-traverseLatex :: Monad m => (s -> s) -> (s -> LaTeX -> m LaTeX) -> LaTeX -> StateT s m LaTeX
+traverseLatex :: Monad m => (s -> s) -> (s -> LaTeX -> ReaderT Config (StateT s m) LaTeX) -> LaTeX -> ReaderT Config (StateT s m) LaTeX
 traverseLatex update f tex@(TeXComm "plot" _args) = do
     sta <- get
     modify update
-    lift $ f sta tex
+    f sta tex
 traverseLatex update f (TeXSeq first second) = do
     first' <- traverseLatex update f first
     second' <- traverseLatex update f second
@@ -54,6 +49,9 @@ traverseLatex update f (TeXEnv str args latex) = do
     return $ TeXEnv str args latex'
 traverseLatex _ _ x = return x
 
+printLatex :: Either ParseError LaTeX -> IO ()
+printLatex (Left _error) = return ()
+printLatex (Right ast)   = print ast
 -- processLatex :: LaTeX -> IO LaTeX
 -- processLatex (TeXSeq first second) = do
 --     first' <- processLatex first

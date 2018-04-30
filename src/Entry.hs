@@ -27,4 +27,4 @@ main :: IO ()
 main = do
     filePath <- getCurrentDirectory
     con <- execParser $ configWithInfo filePath
-    runReaderT renderLatex con
+    evalLatex con
