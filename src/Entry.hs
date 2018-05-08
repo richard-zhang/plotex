@@ -1,12 +1,12 @@
 module Entry
     (main) where
 
-import Lib
-import Config
+import           Config
+import           Lib
 
-import Options.Applicative
-import Data.Semigroup ((<>))
-import System.Directory
+import           Data.Semigroup      ((<>))
+import           Options.Applicative
+import           System.Directory
 
 config :: FilePath -> Parser Config
 config defdir = Config

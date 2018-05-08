@@ -1,21 +1,21 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Lib
     ( evalLatex
     ) where
 
-import Interp
-import Uid
-import Config
+import           Config
+import           Interp
+import           Uid
 
-import Text.LaTeX.Base.Parser
-import Text.LaTeX.Base.Syntax
-import Text.LaTeX.Base.Render
-import Control.Monad.State
-import Control.Monad.Reader
+import           Control.Monad.Reader
+import           Control.Monad.State
+import           Text.LaTeX.Base.Parser
+import           Text.LaTeX.Base.Render
+import           Text.LaTeX.Base.Syntax
 
 evalLatex :: Config -> IO ()
-evalLatex = flip evalStateT 0 . runReaderT renderLatex 
+evalLatex = flip evalStateT 0 . runReaderT renderLatex
 
 renderLatex :: Program ()
 renderLatex = do
@@ -24,12 +24,12 @@ renderLatex = do
     liftIO $ printLatex latex
     let latex' = fmap processLatex latex
     iolatex <- case latex' of
-        Left err -> (return . TeXRaw . fromString . show) err
-        Right iolatex -> iolatex 
+        Left err      -> (return . TeXRaw . fromString . show) err
+        Right iolatex -> iolatex
     liftIO $ renderFile filePath iolatex
 
 processLatex :: LaTeX -> Program LaTeX
-processLatex = traverseLatex (+1) processLatexHelper 
+processLatex = traverseLatex (+1) processLatexHelper
 
 processLatexHelper :: Int -> LaTeX -> Program LaTeX
 processLatexHelper sta (TeXComm "plot" [FixArg (TeXRaw dsl)]) =
@@ -67,7 +67,7 @@ printLatex (Right ast)   = print ast
 
 -- processDSL :: T.Text -> IO T.Text
 -- processDSL text = do
---     print text 
+--     print text
 --     return "hello.txt"
 
 -- func :: (Double -> Double) -> Double -> Double -> Double -> [(Double, Double)]
@@ -83,7 +83,7 @@ printLatex (Right ast)   = print ast
 --         plot (line "" [func (\x -> x * x) 1 50 0.5])
 
 -- someFunc = H.withEmbeddedR defaultConfig $
-    -- H.runRegion $ do 
+    -- H.runRegion $ do
         -- path <- io getCurrentDirectory
         -- [r| png(filename=paste(path_hs, "/na.png", sep=""));
             -- curve(x^2, from=1, to=50, , xlab="x", ylab="y");
@@ -102,4 +102,4 @@ printLatex (Right ast)   = print ast
             -- points(rv_hs$centers, pch = 4, cex = 4, lwd = 4);
         -- |]
         -- return ()
--- 
+--

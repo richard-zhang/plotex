@@ -1,15 +1,14 @@
-module Interp
-    ( processDSL
-    ) where
+{-# LANGUAGE OverloadedStrings #-}
+module Interp where
 
-import Config
+import           Config
 
-import qualified Data.Text as T
-import Text.LaTeX.Base.Syntax
-import Data.String
-import Control.Monad.Reader
-import Text.ParserCombinators.Parsec
-import qualified Math as M
+import           Control.Monad.Reader
+import           Data.String
+import qualified Data.Text                     as T
+import qualified Math                          as M
+import           Text.LaTeX.Base.Syntax
+import           Text.ParserCombinators.Parsec
 -- import Graphics.Rendering.Chart.Easy
 -- import Graphics.Rendering.Chart.Backend.Cairo
 type PlotExpr = M.Expr Double
@@ -17,13 +16,14 @@ type PlotExpr = M.Expr Double
 data PlotSL = PSeq PlotSL PlotSL
             | PRange PlotRange PlotSL
             | PCom PlotExpr PlotConfig
+            deriving (Show, Eq)
 
-data PlotRange = PFor Integer Integer PlotExpr
+data PlotRange = PFor Integer Integer PlotExpr deriving (Show, Eq)
 
-data PlotConfig = PlotConfig { range :: (Integer, Integer), style :: String }
+data PlotConfig = PlotConfig { range :: (Integer, Integer), style :: String } deriving (Show, Eq)
 
 defaultConfig :: PlotConfig
-defaultConfig = PlotConfig 
+defaultConfig = PlotConfig
     { range = (0, 10)
     , style = "---"
     }
@@ -60,7 +60,7 @@ parsePlotConfigStyle = do
     string "style"
     char '='
     char '\"'
-    sty <- parseStyle 
+    sty <- parseStyle
     char '\"'
     return $ \config -> config { style = sty }
 
@@ -108,10 +108,10 @@ parsePCom = do
     char '('
     expr <- parsePlotExpr
     spaces
-    char ','
+    optional $ char ','
     spaces
     configs <- sepBy parsePlotConfig (spaces >> char ',' >> spaces)
-    let config = foldl1 (.) configs defaultConfig
+    let config = foldl (.) id configs defaultConfig
     spaces
     char ')'
     spaces
@@ -120,7 +120,7 @@ parsePCom = do
 pACKAGENAME :: String
 pACKAGENAME = "plotex"
 
-processDSL :: String -> T.Text -> Program LaTeX 
+processDSL :: String -> T.Text -> Program LaTeX
 processDSL uid text = do
     let filename = fromString $ pACKAGENAME ++ "_" ++ uid ++ ".png"
     interpDSL filename text

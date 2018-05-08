@@ -2,7 +2,7 @@ module Uid
     ( generateUID
     ) where
 
-import Control.Monad
+import           Control.Monad
 
 letters :: [String]
 letters = [1..] >>= flip replicateM ['a'..'z']

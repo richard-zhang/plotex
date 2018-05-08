@@ -8,12 +8,12 @@
 -- | Parse and evaluate mathematical expressions.
 module Math where
 
-import Control.Applicative ((<|>))
-import Control.Monad       (liftM, liftM2)
+import           Control.Applicative                ((<|>))
+import           Control.Monad                      (liftM, liftM2)
 
 import qualified Data.Map                           as M
-import qualified Text.ParserCombinators.Parsec.Expr as P
 import qualified Text.ParserCombinators.Parsec      as P
+import qualified Text.ParserCombinators.Parsec.Expr as P
 
 -- | Mathematical expressions.
 data Expr a = Num      a
@@ -51,7 +51,7 @@ data Expr a = Num      a
             | ArcTanh (Expr a)
             | ArcSech (Expr a)
             | ArcCsch (Expr a)
-            | ArcCoth (Expr a) deriving Show
+            | ArcCoth (Expr a) deriving (Show, Eq)
 
 -- | Parse a mathematical expression.
 --
