@@ -23,4 +23,12 @@ testParsePCom = describe "ParserPCom" $ do
         helper parsePCom "plot(x)" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig)
 
     it "parse pcom and set plotConfig's range field" $
-        helper parsePCom "plot(x, [2, 4])" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig { range = (2, 4) })
+        helper parsePCom "plot( x , [ 2, 4 ] )" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig { range = (2, 4) })
+
+    it "parse pcom and set range and style field" $
+        helper parsePCom "plot(x, style=*** , [2, 8])" `shouldBe` (Right $ PCom (M.Var "x")
+        defaultConfig { range = (2, 8), style = "***" })
+
+    it "parse pcom and set range and style field" $
+        helper parsePCom "plot(x, [2, 8], style=***  )" `shouldBe` (Right $ PCom (M.Var "x")
+        defaultConfig { range = (2, 8), style = "***" })

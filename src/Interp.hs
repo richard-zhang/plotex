@@ -5,10 +5,12 @@ import           Config
 
 import           Control.Monad.Reader
 import           Data.String
-import qualified Data.Text                     as T
-import qualified Math                          as M
+import qualified Data.Text                              as T
+import qualified Math                                   as M
 import           Text.LaTeX.Base.Syntax
 import           Text.ParserCombinators.Parsec
+import           Text.ParserCombinators.Parsec.Language (haskellDef)
+import qualified Text.ParserCombinators.Parsec.Token    as P
 -- import Graphics.Rendering.Chart.Easy
 -- import Graphics.Rendering.Chart.Backend.Cairo
 type PlotExpr = M.Expr Double
@@ -21,6 +23,14 @@ data PlotSL = PSeq PlotSL PlotSL
 data PlotRange = PFor Integer Integer PlotExpr deriving (Show, Eq)
 
 data PlotConfig = PlotConfig { range :: (Integer, Integer), style :: String } deriving (Show, Eq)
+
+lexer       = P.makeTokenParser haskellDef
+
+parens      = P.parens lexer
+symbol      = P.symbol lexer
+comma       = P.comma lexer
+commaSep    = P.commaSep lexer
+squares     = P.squares lexer
 
 defaultConfig :: PlotConfig
 defaultConfig = PlotConfig
@@ -37,9 +47,6 @@ parseStyle = foldl1 (<|>) $ fmap string listOfStyle
 digits :: Parser Integer
 digits = fmap read (many1 digit)
 
-symbol :: Parser Char
-symbol = oneOf "!$%&|*+-/:<?>@^_~#"
-
 parsePlotExpr :: Parser PlotExpr
 parsePlotExpr = M.build
 
@@ -47,21 +54,19 @@ parsePlotSL :: Parser PlotSL
 parsePlotSL = try parsePSeq <|> try parsePRange <|> parsePCom
 
 parsePlotConfigRange ::Parser (PlotConfig -> PlotConfig)
-parsePlotConfigRange = do
-    char '['
+parsePlotConfigRange = squares $ do
     spaces
-    [lowerBound, upperBound] <- sepBy1 digits (spaces >> char ',' >> spaces)
+    [lowerBound, upperBound] <- sepBy1 digits $ try (spaces >> comma)
     spaces
-    char ']'
     return $ \config -> config { range = (lowerBound, upperBound) }
 
 parsePlotConfigStyle :: Parser (PlotConfig -> PlotConfig)
 parsePlotConfigStyle = do
     string "style"
     char '='
-    char '\"'
+    optional $ char '\"'
     sty <- parseStyle
-    char '\"'
+    optional $ char '\"'
     return $ \config -> config { style = sty }
 
 parsePlotConfig ::Parser (PlotConfig -> PlotConfig)
@@ -103,19 +108,17 @@ parsePSeq =
         return $ PSeq first second
 
 parsePCom :: Parser PlotSL
-parsePCom = do
-    string "plot"
-    char '('
-    expr <- parsePlotExpr
-    spaces
-    optional $ char ','
-    spaces
-    configs <- sepBy parsePlotConfig (spaces >> char ',' >> spaces)
-    let config = foldl (.) id configs defaultConfig
-    spaces
-    char ')'
-    spaces
-    return $ PCom expr config
+parsePCom =
+    string "plot" >>
+    parens (do
+        expr <- parsePlotExpr
+        spaces
+        optional comma
+        configs <- sepBy parsePlotConfig $ try (spaces >> comma)
+        let config = foldl (.) id configs defaultConfig
+        spaces
+        return $ PCom expr config
+        )
 
 pACKAGENAME :: String
 pACKAGENAME = "plotex"
