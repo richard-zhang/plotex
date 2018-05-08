@@ -6,7 +6,6 @@ import Config
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Control.Monad.Reader
 import System.Directory
 
 config :: FilePath -> Parser Config
