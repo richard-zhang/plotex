@@ -25,7 +25,6 @@ data PlotRange = PFor Integer Integer PlotExpr deriving (Show, Eq)
 data PlotConfig = PlotConfig { range :: (Integer, Integer), style :: String } deriving (Show, Eq)
 
 lexer       = P.makeTokenParser haskellDef
-
 parens      = P.parens lexer
 symbol      = P.symbol lexer
 comma       = P.comma lexer
@@ -75,7 +74,7 @@ parsePlotConfig = parsePlotConfigRange <|> parsePlotConfigStyle
 parsePlotRange :: Parser PlotRange
 parsePlotRange = do
     string "for"
-    space
+    skipMany1 space
     expr <- M.variable
     spaces
     char '='
@@ -91,21 +90,17 @@ parsePRange = do
     plotRange <- parsePlotRange
     plotSL <- parsePlotSL
     string "end"
+    spaces
     return $ PRange plotRange plotSL
 
 parseSinglePlot :: Parser PlotSL
-parseSinglePlot = try parsePRange <|> parsePCom
+parseSinglePlot = (try parsePRange) <|> parsePCom
 
 parsePSeq :: Parser PlotSL
-parsePSeq =
-    try $ do
-        first <- parseSinglePlot
-        second <- parseSinglePlot
-        return $ PSeq first second
-    <|> do
-        first <- parsePSeq
-        second <- parseSinglePlot
-        return $ PSeq first second
+parsePSeq = do
+    first <- parseSinglePlot
+    second <- try parsePSeq <|> parseSinglePlot
+    return $ PSeq first second
 
 parsePCom :: Parser PlotSL
 parsePCom =
