@@ -6,13 +6,13 @@ import           Config
 import           Control.Monad.Reader
 import           Data.String
 import qualified Data.Text                              as T
+import           Graphics.Rendering.Chart.Backend.Cairo
+import           Graphics.Rendering.Chart.Easy
 import qualified Math                                   as M
 import           Text.LaTeX.Base.Syntax
 import           Text.ParserCombinators.Parsec
 import           Text.ParserCombinators.Parsec.Language (haskellDef)
 import qualified Text.ParserCombinators.Parsec.Token    as P
--- import Graphics.Rendering.Chart.Easy
--- import Graphics.Rendering.Chart.Backend.Cairo
 type PlotExpr = M.Expr Double
 
 data PlotSL = PSeq PlotSL PlotSL
@@ -118,15 +118,29 @@ parsePCom =
 pACKAGENAME :: String
 pACKAGENAME = "plotex"
 
-processDSL :: String -> T.Text -> Program LaTeX
-processDSL uid text = do
-    let filename = fromString $ pACKAGENAME ++ "_" ++ uid ++ ".png"
-    interpDSL filename text
-    return (TeXComm "plot" [FixArg (TeXRaw filename)])
+processDSL :: String -> [TeXArg] -> Program LaTeX
+processDSL uid (FixArg (TeXRaw text):args) = do
+    figPath <- asks getPath
+    -- (liftIO . putStrLn . getPath) con
+    let filename = fromString $ figPath ++ "/" ++ pACKAGENAME ++ "_" ++ uid ++ ".png"
+    liftIO $ print text
+    -- interpDSL filename text
+    return (TeXComm "includegraphics" (FixArg (TeXRaw filename):args))
 
-interpDSL :: T.Text -> T.Text -> Program T.Text
-interpDSL _ t = do
-    con <- ask
-    (liftIO . putStrLn . getPath) con
+processDSL uid (x:xs) = do
+    (TeXComm com args) <- processDSL uid xs
+    return $ TeXComm com (x:args)
+
+processDSL _ [] = do
+    liftIO $ putStrLn "please input a valid DSL"
+    return (TeXComm "plot" [])
+
+produceImage :: T.Text -> PlotSL -> Program ()
+produceImage = undefined
+
+interpDSL :: T.Text -> T.Text -> Program ()
+interpDSL abspath t = do
     liftIO $ print t
-    return t
+    case parse parsePlotSL "PlotSL" (T.unpack t) of
+        Left err  -> (liftIO $ print err)
+        Right val -> (produceImage abspath val)

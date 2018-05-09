@@ -32,8 +32,8 @@ processLatex :: LaTeX -> Program LaTeX
 processLatex = traverseLatex (+1) processLatexHelper
 
 processLatexHelper :: Int -> LaTeX -> Program LaTeX
-processLatexHelper sta (TeXComm "plot" [FixArg (TeXRaw dsl)]) =
-    processDSL (generateUID sta) dsl
+processLatexHelper sta (TeXComm "plot" args) =
+    processDSL (generateUID sta) args
 
 traverseLatex :: Monad m => (s -> s) -> (s -> LaTeX -> ReaderT Config (StateT s m) LaTeX) -> LaTeX -> ReaderT Config (StateT s m) LaTeX
 traverseLatex update f tex@(TeXComm "plot" _args) = do
