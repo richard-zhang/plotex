@@ -9,6 +9,7 @@ import qualified Data.Text                              as T
 import           Graphics.Rendering.Chart.Backend.Cairo
 import           Graphics.Rendering.Chart.Easy
 import qualified Math                                   as M
+import qualified Text.LaTeX.Base.Render                 as L
 import           Text.LaTeX.Base.Syntax
 import           Text.ParserCombinators.Parsec
 import           Text.ParserCombinators.Parsec.Language (haskellDef)
@@ -53,7 +54,7 @@ parsePlotSL :: Parser PlotSL
 parsePlotSL = try parsePSeq <|> try parsePRange <|> parsePCom
 
 parsePlotConfigRange ::Parser (PlotConfig -> PlotConfig)
-parsePlotConfigRange = squares $ do
+parsePlotConfigRange = parens $ do
     spaces
     [lowerBound, upperBound] <- sepBy1 digits $ try (spaces >> comma)
     spaces
@@ -118,8 +119,21 @@ parsePCom =
 pACKAGENAME :: String
 pACKAGENAME = "plotex"
 
-processDSL :: String -> [TeXArg] -> Program LaTeX
-processDSL uid (FixArg (TeXRaw text):args) = do
+convertToLatexComment :: [TeXArg] -> LaTeX
+convertToLatexComment args = mconcat comments
+    where
+        text = L.render $ TeXComm "plot" args
+        texts = T.splitOn "\n" text
+        comments = fmap TeXComment texts
+
+processDSL :: String -> LaTeX -> Program LaTeX
+processDSL uid (TeXComm "plot" args) = do
+    let comment = convertToLatexComment args
+    latex <- processDSLHelper uid args
+    return $ TeXSeq comment latex
+
+processDSLHelper :: String -> [TeXArg] -> Program LaTeX
+processDSLHelper uid (FixArg (TeXRaw text):args) = do
     figPath <- asks getPath
     -- (liftIO . putStrLn . getPath) con
     let filename = fromString $ figPath ++ "/" ++ pACKAGENAME ++ "_" ++ uid ++ ".png"
@@ -127,11 +141,11 @@ processDSL uid (FixArg (TeXRaw text):args) = do
     -- interpDSL filename text
     return (TeXComm "includegraphics" (FixArg (TeXRaw filename):args))
 
-processDSL uid (x:xs) = do
-    (TeXComm com args) <- processDSL uid xs
+processDSLHelper uid (x:xs) = do
+    (TeXComm com args) <- processDSLHelper uid xs
     return $ TeXComm com (x:args)
 
-processDSL _ [] = do
+processDSLHelper _ [] = do
     liftIO $ putStrLn "please input a valid DSL"
     return (TeXComm "plot" [])
 

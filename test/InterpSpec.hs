@@ -25,14 +25,14 @@ testParsePCom = describe "ParserPCom" $ do
         helper parsePCom "plot(x)" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig)
 
     it "parse pcom and set plotConfig's range field" $
-        helper parsePCom "plot( x , [ 2, 4 ] )" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig { range = (2, 4) })
+        helper parsePCom "plot( x , ( 2, 4 ) )" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig { range = (2, 4) })
 
     it "parse pcom and set range and style field" $
-        helper parsePCom "plot(x, style=*** , [2, 8])" `shouldBe` (Right $ PCom (M.Var "x")
+        helper parsePCom "plot(x, style=*** , (2, 8))" `shouldBe` (Right $ PCom (M.Var "x")
         defaultConfig { range = (2, 8), style = "***" })
 
     it "parse pcom and set range and style field" $
-        helper parsePCom "plot(x, [2, 8], style=***  )" `shouldBe` (Right $ PCom (M.Var "x")
+        helper parsePCom "plot(x, (2, 8), style=***  )" `shouldBe` (Right $ PCom (M.Var "x")
         defaultConfig { range = (2, 8), style = "***" })
 
 testParsePRange :: Spec
@@ -46,7 +46,7 @@ testParsePRange = describe "ParseParsePrange" $ do
 testParseSinglePlot :: Spec
 testParseSinglePlot = describe "ParseSinglePlot" $ do
     it "parse for SinglePlot: Single" $
-        helper parseSinglePlot "plot(x, style=*** , [2, 8])" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig { range = (2, 8), style = "***" })
+        helper parseSinglePlot "plot(x, style=*** , (2, 8))" `shouldBe` (Right $ PCom (M.Var "x") defaultConfig { range = (2, 8), style = "***" })
 
     it "parse for SinglePlot: Range" $
         helper parseSinglePlot "for a = 3:8\n\tplot(x)\nend" `shouldBe` (Right rangePlotSL)
@@ -87,7 +87,7 @@ testParsePlotRange = describe "ParsePlotRange" $ do
 testParsePlotSL :: Spec
 testParsePlotSL = describe "ParserPlotSL" $ do
     it "parse plotsl: complex" $
-        helper parsePlotSL "for a=1:10\n plot(x+4, [2,5])   plot(x)\nend" `shouldSatisfy` isPRange
+        helper parsePlotSL "for a=1:10\n plot(x+4, (2,5))   plot(x)\nend" `shouldSatisfy` isPRange
 
     it "parse plotsl: complex1" $
         helper parsePlotSL "plot(x) for a = 1:10\n \tplot(x) \nend plot(x)  " `shouldBe`

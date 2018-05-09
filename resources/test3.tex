@@ -1,5 +1,10 @@
 \begin{figure}[h]
-  \includegraphics[width=0.5\textwidth]{resources/test3.tex/plotex_a.png}
+  % \includegraphics[width=0.5\textwidth]{resources/test3.tex/plotex_a.png}
+  \plot[width=0.5\textwidth]{
+    for a = 1:8
+      plot(x+a, [1,10])
+    end
+  }
   \caption{A boat.}
   \label{fig:boat1}
 \end{figure}
