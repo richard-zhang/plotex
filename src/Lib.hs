@@ -10,6 +10,8 @@ import           Uid
 
 import           Control.Monad.Reader
 import           Control.Monad.State
+import           System.Directory
+import           System.FilePath.Posix
 import           Text.LaTeX.Base.Parser
 import           Text.LaTeX.Base.Render
 import           Text.LaTeX.Base.Syntax
@@ -20,19 +22,39 @@ evalLatex = flip evalStateT 0 . runReaderT renderLatex
 renderLatex :: Program ()
 renderLatex = do
     filePath <- asks getPath
-    latex <- liftIO $ parseLaTeXFile filePath
+    isDirectory <- liftIO $ doesDirectoryExist filePath
+    case isDirectory of
+        True  -> renderLatexInDir
+        False -> renderLatexSingleFile
+
+renderLatexSingleFile :: Program ()
+renderLatexSingleFile = do
+    filePath <- asks getPath
+    local (\x -> x { getPath = takeDirectory filePath }) (renderLatexHelper filePath)
+
+renderLatexInDir :: Program ()
+renderLatexInDir = do
+    filePath <- asks getPath
+    texes <- liftIO $ fmap (filter ((== ".tex") . takeExtension)) $ listDirectory filePath
+    mapM_ renderLatexHelper texes
+
+renderLatexHelper :: FilePath -> Program ()
+renderLatexHelper filename = do
+    filePath <- asks getPath
+    let latexFilePath = filePath </> filename
+    latex <- liftIO $ parseLaTeXFile latexFilePath
     liftIO $ printLatex latex
     let latex' = fmap processLatex latex
     iolatex <- case latex' of
         Left err      -> (return . TeXRaw . fromString . show) err
         Right iolatex -> iolatex
-    liftIO $ renderFile filePath iolatex
+    liftIO $ renderFile latexFilePath iolatex
 
 processLatex :: LaTeX -> Program LaTeX
 processLatex = traverseLatex (+1) processLatexHelper
 
 processLatexHelper :: Int -> LaTeX -> Program LaTeX
-processLatexHelper sta tex@(TeXComm "plot" args) =
+processLatexHelper sta tex@(TeXComm "plot" _args) =
     processDSL (generateUID sta) tex
 
 traverseLatex :: Monad m => (s -> s) -> (s -> LaTeX -> ReaderT Config (StateT s m) LaTeX) -> LaTeX -> ReaderT Config (StateT s m) LaTeX

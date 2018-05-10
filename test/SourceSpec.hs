@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-module InterpSpec where
+module SourceSpec where
 import           Data.Either
-import           Interp
 import qualified Math                          as M
+import           Source
 import           Test.Hspec
 import           Text.ParserCombinators.Parsec
 

@@ -34,7 +34,7 @@ dependencies:
 - containers == 0.5.*
 - attoparsec == 0.13.*
 - attoparsec-expr == 0.1.*
-
+- filepath == 1.4.*
 library:
   source-dirs: src
 
