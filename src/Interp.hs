@@ -4,14 +4,11 @@ module Interp where
 import           Config
 import           Control.Monad.Reader
 import           Data.String
-import qualified Data.Text                              as T
-import           Graphics.Rendering.Chart.Backend.Cairo
-import           Graphics.Rendering.Chart.Easy
-import           Source
+import qualified Data.Text              as T
+import           Eval
 import           System.FilePath.Posix
-import qualified Text.LaTeX.Base.Render                 as L
+import qualified Text.LaTeX.Base.Render as L
 import           Text.LaTeX.Base.Syntax
-import           Text.ParserCombinators.Parsec
 
 pGRAPHICPATHNAME :: String
 pGRAPHICPATHNAME = "plotexfig"
@@ -44,13 +41,3 @@ processDSLHelper uid (x:xs) = do
 processDSLHelper _ [] = do
     liftIO $ putStrLn "please input a valid DSL"
     return (TeXComm "plot" [])
-
-produceImage ::FilePath -> PlotSL -> Program ()
-produceImage = undefined
-
-interpDSL :: FilePath -> T.Text -> Program ()
-interpDSL filepath t = do
-    liftIO $ print t
-    -- case parse parsePlotSL "PlotSL" (T.unpack t) of
-        -- Left err  -> (liftIO $ print err)
-        -- Right val -> (produceImage filepath val)
