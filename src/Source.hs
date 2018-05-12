@@ -41,7 +41,7 @@ parsePlotExpr :: Parser PlotExpr
 parsePlotExpr = M.build
 
 parsePlotSL :: Parser PlotSL
-parsePlotSL = try parsePSeq <|> try parsePRange <|> parsePCom
+parsePlotSL = spaces >> (try parsePSeq <|> try parsePRange <|> parsePCom)
 
 parsePlotConfigRange ::Parser (PlotConfig -> PlotConfig)
 parsePlotConfigRange = parens $ do

@@ -1,6 +1,6 @@
 module Eval where
 import           Config
-import           Control.Monad.Error
+import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Data.Map.Strict                        as Map
 import qualified Data.Text                              as T
@@ -10,7 +10,7 @@ import qualified Math                                   as M
 import           Source
 import           Text.ParserCombinators.Parsec
 type Env = Map.Map String Double
-type Eval = ReaderT Env (ErrorT String IO)
+type Eval = ReaderT Env (ExceptT String IO)
 
 interpDSL :: FilePath -> T.Text -> Program ()
 interpDSL filepath t = do
@@ -20,8 +20,8 @@ interpDSL filepath t = do
         Right val -> (produceImage filepath val)
 
 runEval ::
-  MonadIO m => r -> ReaderT r (ErrorT e IO) a -> m (Either e a)
-runEval env ev = liftIO $ runErrorT $ runReaderT ev env
+  MonadIO m => r -> ReaderT r (ExceptT e IO) a -> m (Either e a)
+runEval env ev = liftIO $ runExceptT $ runReaderT ev env
 
 produceImage ::FilePath -> PlotSL -> Program ()
 produceImage path plotsl = runEval (fromList []) (eval path plotsl) >> return ()

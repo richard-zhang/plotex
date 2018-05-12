@@ -96,6 +96,8 @@ testParsePlotSL = describe "ParserPlotSL" $ do
     it "parse plotsl: complex2" $
         helper parsePlotSL "for a = 1:10\nplot(x) plot(x)\nend\nplot(x) plot(x)" `shouldBe`
         (Right $ resultComplex2)
+    it "parse basic" $
+        helper parsePlotSL "\n    plot(x)\n\n" `shouldSatisfy` isRight
 
     where varx = M.Var "x"
           plotx = PCom varx defaultConfig
