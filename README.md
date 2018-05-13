@@ -1,4 +1,4 @@
-# plotex
+# PloTeX
 
 ![A Naive Demo](img/demohd.gif)
 
