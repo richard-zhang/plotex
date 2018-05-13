@@ -9,25 +9,24 @@ import           Graphics.Rendering.Chart.Backend.Cairo
 import           Graphics.Rendering.Chart.Easy
 import qualified Math                                   as M
 import           Source
-import           Text.ParserCombinators.Parsec
 type Env = Map.Map String Double
 type Eval = ReaderT Env (WriterT [[(Double, Double)]] (ExceptT String Identity))
 
 interpDSL :: FilePath -> T.Text -> Program ()
 interpDSL filepath t = liftIO $ do
     print t
-    case parse parsePlotSL "PlotSL" (T.unpack t) of
+    case plotSLparse t of
         Left err  -> print err
-        Right val -> produceImage filepath val
+        Right val -> liftIO $ print val >> produceImage filepath val
 
 produceImage ::FilePath -> PlotSL -> IO ()
-produceImage path psl = produceImageHelper path $ combineToEC $ runEval empty (eval psl)
+produceImage path psl = join $ fmap (produceImageHelper path . combineToEC) $ runEval empty (eval psl)
 
-runEval :: Env -> Eval a -> [[(Double, Double)]]
+runEval :: Env -> Eval a -> IO [[(Double, Double)]]
 runEval env ev =
     case result of
-        Left _             -> []
-        Right (_, results) -> results
+        Left err           -> print err >> return []
+        Right (_, results) -> return results
     where result = runIdentity $ runExceptT $ runWriterT $ runReaderT ev env
 
 produceImageHelper :: (Default r, ToRenderable r) => FilePath -> EC r () -> IO ()
@@ -37,9 +36,12 @@ eval :: PlotSL -> Eval ()
 eval (PCom expr config) = do
     env <- ask
     let numbers = rangeToList $ range config
-    case evalExpr env numbers expr of
-        Just value -> tell [value]
-        Nothing    -> throwError ("Invalid Numerical Expr : " ++ show expr) -- tell []
+    if numbers == [] then
+        throwError "empty x range"
+    else
+        case evalExpr env numbers expr of
+            Just value -> tell [value]
+            Nothing    -> throwError ("Invalid Numerical Expr : " ++ show expr) -- tell []
 
 eval (PRange prange psl) = sequence_ $ fmap (flip evalRangeHelper psl) (evalPlotRange prange)
 
@@ -50,7 +52,7 @@ evalRangeHelper :: (String, Double) -> PlotSL -> Eval ()
 evalRangeHelper (name, value) plotsl = local (\env -> updateVarInEnv env name value) $ eval plotsl
 
 rangeToList :: (Integer, Integer) -> [Double]
-rangeToList (l, u) = [fromIntegral l, (0.5) .. fromIntegral u]
+rangeToList (l, u) = [fromIntegral l, fromIntegral l + 0.5 .. fromIntegral u]
 
 evalPlotRange :: PlotRange -> [(String, Double)]
 evalPlotRange (PFor l u (M.Var name)) = fmap ((,) name ) [fromIntegral l .. fromIntegral u]

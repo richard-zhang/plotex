@@ -1,5 +1,7 @@
 module Source where
 
+import           Data.Char                              (isSpace)
+import qualified Data.Text                              as T
 import qualified Math                                   as M
 import           Text.ParserCombinators.Parsec
 import           Text.ParserCombinators.Parsec.Language (haskellDef)
@@ -41,13 +43,11 @@ parsePlotExpr :: Parser PlotExpr
 parsePlotExpr = M.build
 
 parsePlotSL :: Parser PlotSL
-parsePlotSL = spaces >> (try parsePSeq <|> try parsePRange <|> parsePCom)
+parsePlotSL = (try parsePSeq <|> try parsePRange <|> parsePCom)
 
 parsePlotConfigRange ::Parser (PlotConfig -> PlotConfig)
 parsePlotConfigRange = parens $ do
-    spaces
-    [lowerBound, upperBound] <- sepBy1 digits $ try (spaces >> comma)
-    spaces
+    [lowerBound, upperBound] <- sepBy1 digits $ try comma
     return $ \config -> config { range = (lowerBound, upperBound) }
 
 parsePlotConfigStyle :: Parser (PlotConfig -> PlotConfig)
@@ -65,15 +65,11 @@ parsePlotConfig = parsePlotConfigRange <|> parsePlotConfigStyle
 parsePlotRange :: Parser PlotRange
 parsePlotRange = do
     string "for"
-    skipMany1 space
     expr <- M.variable
-    spaces
     char '='
-    spaces
     lowerBound <- digits
     char ':'
     upperBound <- digits
-    spaces
     return $ PFor lowerBound upperBound expr
 
 parsePRange :: Parser PlotSL
@@ -81,7 +77,6 @@ parsePRange = do
     plotRange <- parsePlotRange
     plotSL <- parsePlotSL
     string "end"
-    spaces
     return $ PRange plotRange plotSL
 
 parseSinglePlot :: Parser PlotSL
@@ -98,10 +93,11 @@ parsePCom =
     string "plot" >>
     parens (do
         expr <- parsePlotExpr
-        spaces
         optional comma
-        configs <- sepBy parsePlotConfig $ try (spaces >> comma)
+        configs <- sepBy parsePlotConfig $ try comma
         let config = foldl (.) id configs defaultConfig
-        spaces
         return $ PCom expr config
         )
+
+plotSLparse :: T.Text -> Either ParseError PlotSL
+plotSLparse = parse parsePlotSL "" . filter (not . isSpace) . T.unpack

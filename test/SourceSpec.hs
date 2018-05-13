@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 module SourceSpec where
+import           Data.Char
 import           Data.Either
 import qualified Math                          as M
 import           Source
@@ -17,7 +18,7 @@ spec = do
     testParsePSeq
     testParsePlotSL
 
-helper parser = parse parser ""
+helper parser = parse parser "" . filter (not . isSpace)
 
 testParsePCom :: Spec
 testParsePCom = describe "ParserPCom" $ do
@@ -35,6 +36,9 @@ testParsePCom = describe "ParserPCom" $ do
         helper parsePCom "plot(x, (2, 8), style=***  )" `shouldBe` (Right $ PCom (M.Var "x")
         defaultConfig { range = (2, 8), style = "***" })
 
+    it "parse for SinglePlot: x + 1" $
+        helper parseSinglePlot "plot(x + 1)" `shouldSatisfy` isRight
+
 testParsePRange :: Spec
 testParsePRange = describe "ParseParsePrange" $ do
     it "parse for plotSL" $
@@ -50,7 +54,6 @@ testParseSinglePlot = describe "ParseSinglePlot" $ do
 
     it "parse for SinglePlot: Range" $
         helper parseSinglePlot "for a = 3:8\n\tplot(x)\nend" `shouldBe` (Right rangePlotSL)
-
     where prange = PFor 3 8 $ M.Var "a"
           plotsl = PCom (M.Var "x") defaultConfig
           rangePlotSL = PRange prange plotsl
