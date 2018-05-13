@@ -36,7 +36,6 @@ main = do
         False -> putStrLn "Please Input a Valid Path"
 
 createGraphicDirectory :: Bool -> FilePath -> IO ()
-createGraphicDirectory _ _ = return ()
 createGraphicDirectory isDir sourcePath = do
     case isDir of
         True  -> createHelper (sourcePath </> pGRAPHICPATHNAME)
